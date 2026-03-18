@@ -1,74 +1,999 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TradeLog PRO</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-firestore.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>TradeLog PRO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:       #03050a;
+      --bg1:      #070b12;
+      --bg2:      #0c1220;
+      --bg3:      #111827;
+      --line:     rgba(255,255,255,0.055);
+      --line2:    rgba(255,255,255,0.1);
+      --text:     #c9d4e8;
+      --text2:    #6b7fa3;
+      --text3:    #3d4f6e;
+      --accent:   #0ea5e9;
+      --accent2:  #38bdf8;
+      --green:    #00d4a4;
+      --green2:   #00f5c4;
+      --red:      #ff3d6b;
+      --red2:     #ff6b8a;
+      --gold:     #f0b429;
+      --purple:   #a78bfa;
+      --mono:     'JetBrains Mono', monospace;
+      --sans:     'Manrope', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 14px; }
+    body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; overflow-x: hidden; }
+    ::selection { background: rgba(14,165,233,0.25); }
+    ::-webkit-scrollbar { width: 3px; height: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #1e2d45; border-radius: 4px; }
+
+    /* ─── NOISE OVERLAY ─── */
+    body::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      opacity: 0.4;
+    }
+
+    /* ─── AUTH ─── */
+    #auth-screen {
+      position: fixed; inset: 0; z-index: 999;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(14,165,233,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 40% at 80% 80%, rgba(167,139,250,0.05) 0%, transparent 50%);
+    }
+    .auth-wrap { position: relative; width: 420px; padding: 24px; }
+    .auth-glow {
+      position: absolute; inset: -60px; background: radial-gradient(ellipse at center, rgba(14,165,233,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .auth-card {
+      position: relative; background: var(--bg1);
+      border: 1px solid var(--line2); border-radius: 20px;
+      padding: 52px 44px; text-align: center;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.02), 0 40px 80px rgba(0,0,0,0.6);
+    }
+    .auth-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(14,165,233,0.1); border: 1px solid rgba(14,165,233,0.2);
+      border-radius: 100px; padding: 4px 12px;
+      font-size: 10px; font-family: var(--mono); color: var(--accent); letter-spacing: 2px;
+      margin-bottom: 28px;
+    }
+    .auth-badge-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); animation: blink 1.5s ease infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .auth-logo-ring {
+      width: 68px; height: 68px; border-radius: 18px; margin: 0 auto 24px;
+      background: linear-gradient(135deg, rgba(14,165,233,0.2), rgba(167,139,250,0.15));
+      border: 1px solid rgba(14,165,233,0.25);
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .auth-logo-ring::before {
+      content: ''; position: absolute; inset: -4px; border-radius: 22px;
+      border: 1px solid rgba(14,165,233,0.1);
+    }
+    .auth-title { font-size: 30px; font-weight: 900; letter-spacing: -1px; margin-bottom: 6px; color: white; }
+    .auth-title span { color: var(--accent); }
+    .auth-sub { color: var(--text2); font-size: 14px; line-height: 1.6; margin-bottom: 40px; }
+    .google-btn {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%; padding: 15px 20px;
+      background: white; color: #111;
+      border: none; border-radius: 12px;
+      font-size: 14px; font-weight: 700; font-family: var(--sans);
+      cursor: pointer; transition: all 0.25s; letter-spacing: 0.3px;
+    }
+    .google-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(255,255,255,0.12); }
+    .auth-note { font-size: 11px; color: var(--text3); margin-top: 16px; font-family: var(--mono); }
+
+    /* ─── APP ─── */
+    #app { display: none; flex-direction: column; min-height: 100vh; position: relative; z-index: 1; }
+
+    /* ─── HEADER ─── */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      height: 52px;
+      background: rgba(3,5,10,0.88);
+      backdrop-filter: blur(20px) saturate(180%);
+      border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; padding: 0 24px; gap: 0;
+    }
+    .header-brand { display: flex; align-items: center; gap: 10px; margin-right: 32px; }
+    .brand-icon {
+      width: 26px; height: 26px; border-radius: 7px;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      display: grid; place-items: center; flex-shrink: 0;
+    }
+    .brand-name { font-size: 15px; font-weight: 900; letter-spacing: -0.5px; color: white; }
+    .brand-tag { font-size: 9px; font-family: var(--mono); color: var(--accent); background: rgba(14,165,233,0.1); border: 1px solid rgba(14,165,233,0.2); border-radius: 4px; padding: 1px 5px; letter-spacing: 1px; }
+
+    /* ticker tape */
+    .ticker-wrap { flex: 1; overflow: hidden; height: 100%; display: flex; align-items: center; position: relative; }
+    .ticker-wrap::before, .ticker-wrap::after {
+      content: ''; position: absolute; top: 0; bottom: 0; width: 60px; z-index: 2; pointer-events: none;
+    }
+    .ticker-wrap::before { left: 0; background: linear-gradient(to right, rgba(3,5,10,0.88), transparent); }
+    .ticker-wrap::after { right: 0; background: linear-gradient(to left, rgba(3,5,10,0.88), transparent); }
+    .ticker { display: flex; gap: 32px; animation: ticker 30s linear infinite; white-space: nowrap; }
+    .ticker-item { display: flex; align-items: center; gap: 6px; font-size: 11px; font-family: var(--mono); }
+    .ticker-sym { color: var(--text2); }
+    .ticker-val { color: var(--text); font-weight: 600; }
+    .ticker-chg-pos { color: var(--green); }
+    .ticker-chg-neg { color: var(--red); }
+    @keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+    .header-right { display: flex; align-items: center; gap: 12px; margin-left: 24px; flex-shrink: 0; }
+    .live-dot {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 10px; font-family: var(--mono); color: var(--green); letter-spacing: 1px;
+    }
+    .live-dot::before { content:''; width:5px; height:5px; border-radius:50%; background:var(--green); animation: blink 1.5s ease infinite; }
+    .avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 1.5px solid var(--line2); overflow: hidden;
+      cursor: pointer; flex-shrink: 0;
+    }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .hdr-btn {
+      background: var(--bg2); border: 1px solid var(--line);
+      color: var(--text2); padding: 5px 12px; border-radius: 6px;
+      font-size: 10px; font-family: var(--mono); cursor: pointer;
+      letter-spacing: 1px; transition: all 0.15s;
+    }
+    .hdr-btn:hover { border-color: var(--line2); color: var(--text); }
+
+    /* ─── NAV ─── */
+    nav {
+      background: var(--bg1); border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; padding: 0 24px; gap: 2px;
+    }
+    .ntab {
+      background: none; border: none; cursor: pointer;
+      padding: 13px 16px; font-size: 11px; font-family: var(--mono);
+      letter-spacing: 1.5px; color: var(--text3);
+      position: relative; transition: color 0.15s;
+    }
+    .ntab::after { content:''; position:absolute; bottom:-1px; left:16px; right:16px; height:1.5px; background: var(--accent); transform: scaleX(0); transition: transform 0.2s; border-radius: 2px; }
+    .ntab.active { color: var(--accent); }
+    .ntab.active::after { transform: scaleX(1); }
+    .ntab:hover:not(.active) { color: var(--text2); }
+    .nav-right { margin-left: auto; display: flex; align-items: center; }
+    .add-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--accent); color: white;
+      border: none; border-radius: 7px; padding: 7px 14px;
+      font-size: 10px; font-family: var(--mono); font-weight: 700;
+      letter-spacing: 1.5px; cursor: pointer; transition: all 0.2s;
+    }
+    .add-btn:hover { background: var(--accent2); transform: translateY(-1px); }
+    .add-btn svg { flex-shrink: 0; }
+
+    /* ─── MAIN ─── */
+    main { flex: 1; padding: 24px; max-width: 1200px; margin: 0 auto; width: 100%; }
+
+    /* ─── KPI GRID ─── */
+    .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; margin-bottom: 20px; }
+    .kpi-card {
+      background: var(--bg1); padding: 20px 22px;
+      position: relative; overflow: hidden; transition: background 0.2s;
+    }
+    .kpi-card:hover { background: var(--bg2); }
+    .kpi-card::before {
+      content: attr(data-n); position: absolute; right: 16px; top: 14px;
+      font-size: 48px; font-family: var(--mono); font-weight: 700;
+      color: rgba(255,255,255,0.025); line-height: 1; pointer-events: none;
+    }
+    .kpi-label { font-size: 9px; font-family: var(--mono); color: var(--text3); letter-spacing: 2.5px; margin-bottom: 12px; text-transform: uppercase; }
+    .kpi-val { font-size: 24px; font-weight: 900; font-family: var(--mono); line-height: 1; letter-spacing: -1px; }
+    .kpi-sub { font-size: 10px; color: var(--text3); margin-top: 7px; font-family: var(--mono); }
+    .kpi-bar { height: 2px; background: var(--line); border-radius: 1px; margin-top: 12px; }
+    .kpi-bar-fill { height: 100%; border-radius: 1px; transition: width 0.8s ease; }
+
+    /* ─── PANELS ─── */
+    .panels { display: grid; grid-template-columns: 1fr 320px; gap: 16px; margin-bottom: 20px; }
+    .panel {
+      background: var(--bg1); border: 1px solid var(--line);
+      border-radius: 14px; overflow: hidden;
+    }
+    .panel-head {
+      padding: 14px 20px; border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .panel-title { font-size: 9px; font-family: var(--mono); color: var(--text3); letter-spacing: 2.5px; text-transform: uppercase; }
+    .panel-body { padding: 20px; }
+
+    /* ─── EQUITY CHART ─── */
+    #eq-svg { width: 100%; display: block; }
+    .chart-labels { display: flex; justify-content: space-between; margin-top: 6px; padding: 0 4px; font-size: 9px; font-family: var(--mono); color: var(--text3); }
+
+    /* ─── MARKET BREAKDOWN ─── */
+    .mkt-item { margin-bottom: 18px; }
+    .mkt-item:last-child { margin-bottom: 0; }
+    .mkt-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+    .mkt-name { font-size: 11px; font-family: var(--mono); }
+    .mkt-info { text-align: right; }
+    .mkt-pnl { font-size: 12px; font-family: var(--mono); font-weight: 600; }
+    .mkt-cnt { font-size: 9px; color: var(--text3); font-family: var(--mono); }
+    .track { height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; }
+    .fill { height: 3px; border-radius: 2px; transition: width 0.7s cubic-bezier(.23,1,.32,1); }
+
+    /* ─── RECENT ─── */
+    .recent-item {
+      display: flex; align-items: center; padding: 10px 0;
+      border-bottom: 1px solid var(--line); gap: 12px;
+    }
+    .recent-item:last-child { border-bottom: none; }
+    .ri-icon {
+      width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+      display: grid; place-items: center; font-size: 13px;
+    }
+    .ri-body { flex: 1; min-width: 0; }
+    .ri-sym { font-weight: 700; font-size: 13px; }
+    .ri-meta { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-top: 2px; }
+    .ri-right { text-align: right; flex-shrink: 0; }
+    .ri-pnl { font-size: 13px; font-family: var(--mono); font-weight: 600; }
+    .ri-date { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-top: 2px; }
+
+    /* ─── FORM ─── */
+    .form-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(6px); z-index: 200;
+      display: flex; align-items: flex-end; justify-content: center;
+      padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    }
+    .form-overlay.open { opacity: 1; pointer-events: all; }
+    .form-sheet {
+      background: var(--bg2); border: 1px solid var(--line2);
+      border-radius: 20px; width: 100%; max-width: 700px;
+      padding: 28px; max-height: 90vh; overflow-y: auto;
+      transform: translateY(30px); transition: transform 0.3s cubic-bezier(.23,1,.32,1);
+    }
+    .form-overlay.open .form-sheet { transform: translateY(0); }
+    .form-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .form-hd-title { font-size: 16px; font-weight: 800; }
+    .form-hd-sub { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-top: 2px; letter-spacing: 1px; }
+    .close-btn {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--bg3); border: 1px solid var(--line);
+      display: grid; place-items: center; cursor: pointer; transition: all 0.15s;
+    }
+    .close-btn:hover { border-color: var(--line2); }
+    .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .fg { display: flex; flex-direction: column; gap: 6px; }
+    .fg.span2 { grid-column: span 2; }
+    .fg.span3 { grid-column: span 3; }
+    .fl { font-size: 9px; font-family: var(--mono); color: var(--text3); letter-spacing: 2px; text-transform: uppercase; }
+    .fi, .fs, .fta {
+      background: rgba(255,255,255,0.04); border: 1px solid var(--line);
+      border-radius: 9px; color: var(--text); padding: 10px 13px;
+      font-size: 13px; font-family: var(--sans); outline: none; width: 100%;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .fi:focus, .fs:focus, .fta:focus { border-color: var(--accent); background: rgba(14,165,233,0.04); }
+    .fs option { background: #0c1220; }
+    .fta { resize: vertical; min-height: 72px; }
+    .dir-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .dir-opt {
+      padding: 10px; border-radius: 9px; border: 1px solid var(--line);
+      background: rgba(255,255,255,0.02); cursor: pointer; text-align: center;
+      font-size: 11px; font-family: var(--mono); font-weight: 600; letter-spacing: 1px;
+      transition: all 0.15s;
+    }
+    .dir-opt.sel-long { background: rgba(0,212,164,0.1); border-color: rgba(0,212,164,0.3); color: var(--green); }
+    .dir-opt.sel-short { background: rgba(255,61,107,0.1); border-color: rgba(255,61,107,0.3); color: var(--red); }
+    .dir-opt:not(.sel-long):not(.sel-short) { color: var(--text3); }
+    .pnl-preview-bar {
+      margin-top: 14px; padding: 12px 16px;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--line); border-radius: 10px;
+      display: flex; gap: 24px; flex-wrap: wrap; align-items: center;
+    }
+    .pnl-preview-bar span { font-size: 11px; font-family: var(--mono); color: var(--text3); }
+    .pnl-preview-bar strong { font-size: 14px; font-family: var(--mono); font-weight: 700; }
+    .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-save {
+      flex: 1; background: var(--accent); color: white; border: none;
+      border-radius: 10px; padding: 13px; font-size: 12px; font-weight: 700;
+      font-family: var(--mono); letter-spacing: 2px; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-save:hover { background: var(--accent2); transform: translateY(-1px); }
+    .btn-cancel {
+      background: var(--bg3); border: 1px solid var(--line); color: var(--text3);
+      border-radius: 10px; padding: 13px 20px; font-size: 12px;
+      font-family: var(--mono); cursor: pointer; transition: all 0.15s;
+    }
+    .btn-cancel:hover { border-color: var(--line2); color: var(--text); }
+
+    /* ─── JOURNAL TABLE ─── */
+    .journal-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+    .journal-hd-title { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; }
+    .filters { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+    .f-label { font-size: 9px; font-family: var(--mono); color: var(--text3); letter-spacing: 2px; margin-right: 4px; }
+    .fbtn {
+      background: transparent; border: 1px solid var(--line);
+      color: var(--text3); padding: 5px 12px; border-radius: 6px;
+      font-size: 10px; font-family: var(--mono); cursor: pointer;
+      letter-spacing: 1px; transition: all 0.15s;
+    }
+    .fbtn.act { background: rgba(14,165,233,0.1); border-color: rgba(14,165,233,0.3); color: var(--accent); }
+    .fbtn:hover:not(.act) { border-color: var(--line2); color: var(--text2); }
+    .fsep { width: 1px; height: 14px; background: var(--line); flex-shrink: 0; }
+
+    .tbl-wrap { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    thead { background: var(--bg2); }
+    th {
+      padding: 12px 16px; text-align: left;
+      font-size: 9px; font-family: var(--mono); color: var(--text3);
+      letter-spacing: 2px; text-transform: uppercase;
+      cursor: pointer; user-select: none; white-space: nowrap;
+      border-bottom: 1px solid var(--line); transition: color 0.15s;
+    }
+    th:hover { color: var(--text2); }
+    th.sorted { color: var(--accent); }
+    tbody tr { border-bottom: 1px solid var(--line); transition: background 0.1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(14,165,233,0.03); }
+    td { padding: 13px 16px; font-size: 13px; vertical-align: middle; }
+    .td-sym { font-weight: 800; font-size: 14px; letter-spacing: -0.3px; }
+    .td-mono { font-family: var(--mono); font-size: 12px; color: var(--text2); }
+    .td-muted { color: var(--text3); font-size: 11px; font-family: var(--mono); }
+
+    /* ─── PILLS ─── */
+    .pill {
+      display: inline-flex; align-items: center; border-radius: 5px;
+      padding: 2px 8px; font-size: 9px; font-family: var(--mono);
+      font-weight: 600; letter-spacing: 1px; border: 1px solid; white-space: nowrap;
+    }
+    .p-long  { background: rgba(0,212,164,0.08); color: var(--green); border-color: rgba(0,212,164,0.2); }
+    .p-short { background: rgba(255,61,107,0.08); color: var(--red); border-color: rgba(255,61,107,0.2); }
+    .p-stocks  { background: rgba(167,139,250,0.08); color: var(--purple); border-color: rgba(167,139,250,0.2); }
+    .p-forex   { background: rgba(240,180,41,0.08); color: var(--gold); border-color: rgba(240,180,41,0.2); }
+    .p-options { background: rgba(255,61,107,0.08); color: #ff8fab; border-color: rgba(255,61,107,0.2); }
+    .p-futures { background: rgba(14,165,233,0.08); color: var(--accent); border-color: rgba(14,165,233,0.2); }
+
+    .pos { color: var(--green); font-family: var(--mono); font-weight: 700; }
+    .neg { color: var(--red); font-family: var(--mono); font-weight: 700; }
+
+    /* ─── ROW ACTIONS ─── */
+    .ra { display: flex; gap: 4px; }
+    .ra-btn {
+      width: 26px; height: 26px; border-radius: 6px;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--line);
+      display: grid; place-items: center; cursor: pointer;
+      opacity: 0; transition: all 0.15s;
+    }
+    tr:hover .ra-btn { opacity: 1; }
+    .ra-btn:hover { background: rgba(255,255,255,0.07); border-color: var(--line2); }
+
+    /* ─── TABLE FOOTER ─── */
+    .tbl-foot {
+      background: var(--bg2); border-top: 1px solid var(--line);
+      padding: 11px 18px; display: flex; justify-content: space-between;
+      align-items: center; font-size: 10px; font-family: var(--mono);
+    }
+    .tbl-foot-left { color: var(--text3); }
+    .tbl-foot-right { display: flex; align-items: center; gap: 6px; }
+
+    /* ─── EMPTY ─── */
+    .empty {
+      background: var(--bg1); border: 1px solid var(--line);
+      border-radius: 14px; padding: 72px 24px; text-align: center;
+    }
+    .empty-title { font-size: 11px; font-family: var(--mono); color: var(--text3); letter-spacing: 3px; margin-top: 16px; }
+    .empty-grid {
+      display: grid; grid-template-columns: repeat(8,1fr); gap: 3px;
+      max-width: 120px; margin: 0 auto 20px; opacity: 0.15;
+    }
+    .eg-cell { height: 10px; border-radius: 2px; background: var(--accent); }
+
+    /* ─── LOADING & TOAST ─── */
+    #loading {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--bg); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 20px;
+    }
+    .load-logo { font-size: 28px; font-weight: 900; letter-spacing: -1px; color: white; }
+    .load-logo span { color: var(--accent); }
+    .load-bar { width: 120px; height: 2px; background: var(--line); border-radius: 1px; overflow: hidden; }
+    .load-bar-fill { height: 100%; background: var(--accent); border-radius: 1px; animation: loadbar 1.5s ease infinite; }
+    @keyframes loadbar { 0%{width:0;margin-left:0} 50%{width:100%;margin-left:0} 100%{width:0;margin-left:100%} }
+
+    #toast {
+      position: fixed; bottom: 28px; left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: var(--bg3); border: 1px solid var(--line2);
+      color: var(--text); padding: 11px 20px; border-radius: 10px;
+      font-size: 11px; font-family: var(--mono); letter-spacing: 1px;
+      opacity: 0; pointer-events: none; transition: all 0.25s; z-index: 500;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ─── RESPONSIVE ─── */
+    @media(max-width: 900px) {
+      .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+      .panels { grid-template-columns: 1fr; }
+    }
+    @media(max-width: 600px) {
+      header { padding: 0 14px; }
+      .ticker-wrap { display: none; }
+      main { padding: 14px; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .form-grid { grid-template-columns: repeat(2, 1fr); }
+      .fg.span3 { grid-column: span 2; }
+    }
+  </style>
 </head>
 <body>
-    <div id="auth-screen">
-        <h2>Please log in</h2>
-        <button id="login">Login with Firebase</button>
-    </div>
-    <div id="app-header">
-        <nav>
-            <ul>
-                <li><a href="#dashboard">Dashboard</a></li>
-                <li><a href="#journal">Journal</a></li>
-            </ul>
-        </nav>
-    </div>
-    <div id="kpi-grid">
-        <!-- KPI data here -->
-    </div>
-    <div id="equity-curve-chart">
-        <!-- Equity curve chart here -->
-    </div>
-    <div id="market-breakdown">
-        <!-- Market breakdown information here -->
-    </div>
-    <div id="recent-trades">
-        <!-- Recent trades list here -->
-    </div>
-    <div id="trade-form-modal">
-        <!-- Trade form modal here -->
-    </div>
-    <div id="filters">
-        <!-- Filters for trades here -->
-    </div>
-    <div id="journal-table">
-        <!-- Journal table here -->
-    </div>
-    <script>
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
 
-        // Initialize Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+<!-- Loading -->
+<div id="loading">
+  <div class="load-logo">Trade<span>Log</span></div>
+  <div class="load-bar"><div class="load-bar-fill"></div></div>
+</div>
 
-        document.getElementById('login').addEventListener('click', () => {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider)
-                .then((result) => {
-                    console.log('User signed in:', result.user);
-                })
-                .catch((error) => {
-                    console.error('Error during login:', error);
-                });
-        });
-    </script>
+<!-- Auth -->
+<div id="auth-screen" style="display:none;">
+  <div class="auth-wrap">
+    <div class="auth-glow"></div>
+    <div class="auth-card">
+      <div class="auth-badge"><div class="auth-badge-dot"></div>SECURE LOGIN</div>
+      <div class="auth-logo-ring">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <path d="M4 24 L12 12 L18 18 L24 8 L28 14" stroke="url(#lg)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs><linearGradient id="lg" x1="0" y1="0" x2="28" y2="14" gradientUnits="userSpaceOnUse"><stop stop-color="#0ea5e9"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs>
+        </svg>
+      </div>
+      <h1 class="auth-title">Trade<span>Log</span></h1>
+      <p class="auth-sub">Your private trading journal.<br/>Track every trade, grow every day.</p>
+      <button class="google-btn" id="google-sign-in">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Sign in with Google
+      </button>
+      <p class="auth-note">Your data is stored privately in Firebase.</p>
+    </div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+  <header>
+    <div class="header-brand">
+      <div class="brand-icon">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M1 10 L4 5 L7 7.5 L10 2 L13 5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="brand-name">TradeLog</span>
+      <span class="brand-tag">PRO</span>
+    </div>
+    <div class="ticker-wrap">
+      <div class="ticker" id="ticker">
+        <!-- injected -->
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-dot">LIVE</div>
+      <div class="avatar"><img id="user-photo" src="" alt="" /></div>
+      <button class="hdr-btn" id="sign-out-btn">SIGN OUT</button>
+    </div>
+  </header>
+
+  <nav>
+    <button class="ntab active" data-tab="dashboard">DASHBOARD</button>
+    <button class="ntab" data-tab="journal">JOURNAL</button>
+    <div class="nav-right" style="padding: 8px 0;">
+      <button class="add-btn" id="show-form-btn">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+        LOG TRADE
+      </button>
+    </div>
+  </nav>
+
+  <main>
+    <!-- DASHBOARD -->
+    <div id="tab-dashboard">
+      <div class="kpi-grid" id="kpi-grid"></div>
+      <div class="panels">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">EQUITY CURVE</span>
+            <span id="eq-badge" style="font-size:10px;font-family:var(--mono);"></span>
+          </div>
+          <div class="panel-body" style="padding-bottom:12px;">
+            <svg id="eq-svg" height="100" viewBox="0 0 600 100" preserveAspectRatio="none"></svg>
+            <div class="chart-labels"><span id="eq-s"></span><span id="eq-e"></span></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">MARKETS</span></div>
+          <div class="panel-body" id="mkt-breakdown"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">RECENT ACTIVITY</span>
+          <span style="font-size:9px;font-family:var(--mono);color:var(--text3);">LAST 6 TRADES</span>
+        </div>
+        <div style="padding:4px 20px 16px;" id="recent-list"></div>
+      </div>
+    </div>
+
+    <!-- JOURNAL -->
+    <div id="tab-journal" style="display:none;">
+      <div class="journal-hd">
+        <div>
+          <div class="journal-hd-title">Trade Journal</div>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px;" id="j-count"></div>
+        </div>
+      </div>
+      <div class="filters" id="filter-row">
+        <span class="f-label">MARKET</span>
+        <button class="fbtn act" data-market="All">ALL</button>
+        <button class="fbtn" data-market="Stocks">STOCKS</button>
+        <button class="fbtn" data-market="Forex">FOREX</button>
+        <button class="fbtn" data-market="Options">OPTIONS</button>
+        <button class="fbtn" data-market="Futures">FUTURES</button>
+        <div class="fsep"></div>
+        <button class="fbtn act" data-dir="All">ALL</button>
+        <button class="fbtn" data-dir="Long">LONG</button>
+        <button class="fbtn" data-dir="Short">SHORT</button>
+      </div>
+      <div id="trades-container"></div>
+    </div>
+  </main>
+</div>
+
+<!-- Form modal -->
+<div class="form-overlay" id="form-overlay">
+  <div class="form-sheet">
+    <div class="form-hd">
+      <div>
+        <div class="form-hd-title" id="form-title">Log New Trade</div>
+        <div class="form-hd-sub" id="form-sub">FILL IN TRADE DETAILS</div>
+      </div>
+      <div class="close-btn" id="close-form">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="#6b7fa3" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="fg">
+        <label class="fl">DATE</label>
+        <input type="date" class="fi" id="f-date" />
+      </div>
+      <div class="fg span2">
+        <label class="fl">SYMBOL / PAIR</label>
+        <input type="text" class="fi" id="f-symbol" placeholder="e.g. AAPL, EUR/USD, SPY 540C" />
+      </div>
+      <div class="fg">
+        <label class="fl">MARKET</label>
+        <select class="fs" id="f-market">
+          <option>Stocks</option><option>Forex</option><option>Options</option><option>Futures</option>
+        </select>
+      </div>
+      <div class="fg span2">
+        <label class="fl">DIRECTION</label>
+        <div class="dir-toggle">
+          <div class="dir-opt sel-long" data-d="Long" id="dir-long">▲ LONG</div>
+          <div class="dir-opt" data-d="Short" id="dir-short">▼ SHORT</div>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">ENTRY PRICE</label>
+        <input type="number" step="any" class="fi" id="f-entry" placeholder="0.00" />
+      </div>
+      <div class="fg">
+        <label class="fl">EXIT PRICE</label>
+        <input type="number" step="any" class="fi" id="f-exit" placeholder="0.00" />
+      </div>
+      <div class="fg">
+        <label class="fl">QUANTITY / LOTS</label>
+        <input type="number" step="any" class="fi" id="f-qty" placeholder="0" />
+      </div>
+      <div class="fg span3">
+        <label class="fl">SETUP TYPE</label>
+        <select class="fs" id="f-setup">
+          <option>Breakout</option><option>Pullback</option><option>Reversal</option>
+          <option>Trend Follow</option><option>Range</option><option>News Play</option><option>Other</option>
+        </select>
+      </div>
+      <div class="fg span3">
+        <label class="fl">NOTES / RATIONALE</label>
+        <textarea class="fta" id="f-notes" placeholder="Why did you take this trade? What did you learn?"></textarea>
+      </div>
+    </div>
+    <div class="pnl-preview-bar" id="pnl-preview" style="display:none;"></div>
+    <div class="form-actions">
+      <button class="btn-save" id="save-btn">SAVE TRADE</button>
+      <button class="btn-cancel" id="cancel-btn">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ═══════════════════════════════════════════
+     FIREBASE — REPLACE CONFIG BELOW
+═══════════════════════════════════════════ -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // ⚠️ PASTE YOUR FIREBASE CONFIG HERE
+  const firebaseConfig = {
+
+
+  apiKey: "AIzaSyAef1jcRmbzkmtepm6RrMzilZKG9cnTpCo",
+
+
+  authDomain: "tradelog-3eda1.firebaseapp.com",
+
+
+  projectId: "tradelog-3eda1",
+
+
+  storageBucket: "tradelog-3eda1.firebasestorage.app",
+
+
+  messagingSenderId: "106640931794",
+
+
+  appId: "1:106640931794:web:5837c8bcfbf0d4c1d7660b"
+
+
+};
+
+  const fbApp = initializeApp(firebaseConfig);
+  const auth  = getAuth(fbApp);
+  const db    = getFirestore(fbApp);
+  const gp    = new GoogleAuthProvider();
+
+  // ── State ──
+  let trades = [], editId = null, currentUser = null;
+  let filterMarket = "All", filterDir = "All";
+  let sortCol = "date", sortAsc = false;
+  let direction = "Long";
+
+  // ── Utils ──
+  const $  = id => document.getElementById(id);
+  const fmt = n => (+n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fmtPnL = n => (n>=0?"+":"-")+"$"+fmt(Math.abs(n));
+  const today = () => new Date().toISOString().split("T")[0];
+  const pillCls = t => ({ Long:"long", Short:"short", Stocks:"stocks", Forex:"forex", Options:"options", Futures:"futures" }[t] || "stocks");
+  const pill = t => `<span class="pill p-${pillCls(t)}">${t.toUpperCase()}</span>`;
+
+  function toast(msg) {
+    const el = $("toast"); el.textContent = msg; el.classList.add("show");
+    setTimeout(()=>el.classList.remove("show"), 2500);
+  }
+
+  // ── Ticker (decorative) ──
+  function buildTicker() {
+    const items = [
+      {sym:"EUR/USD",val:"1.0842",chg:"+0.12%",pos:true},{sym:"AAPL",val:"221.50",chg:"+1.34%",pos:true},
+      {sym:"NQ1!",val:"21,490",chg:"-0.22%",pos:false},{sym:"GBP/USD",val:"1.2741",chg:"+0.08%",pos:true},
+      {sym:"TSLA",val:"263.40",chg:"-2.11%",pos:false},{sym:"SPY",val:"552.80",chg:"+0.45%",pos:true},
+      {sym:"BTC",val:"83,420",chg:"-1.05%",pos:false},{sym:"GOLD",val:"3,042",chg:"+0.61%",pos:true},
+      {sym:"USD/JPY",val:"149.32",chg:"-0.14%",pos:false},{sym:"NVDA",val:"114.20",chg:"+2.77%",pos:true},
+    ];
+    const doubled = [...items,...items];
+    $("ticker").innerHTML = doubled.map(i=>`
+      <div class="ticker-item">
+        <span class="ticker-sym">${i.sym}</span>
+        <span class="ticker-val">${i.val}</span>
+        <span class="${i.pos?'ticker-chg-pos':'ticker-chg-neg'}">${i.chg}</span>
+      </div>`).join("");
+  }
+
+  // ── Auth ──
+  $("google-sign-in").addEventListener("click",()=>signInWithPopup(auth,gp).catch(e=>toast(e.message)));
+  $("sign-out-btn").addEventListener("click",()=>signOut(auth));
+
+  onAuthStateChanged(auth, async user=>{
+    $("loading").style.display="none";
+    if(user){
+      currentUser=user;
+      $("auth-screen").style.display="none";
+      $("app").style.display="flex";
+      $("user-photo").src=user.photoURL||"";
+      buildTicker();
+      await loadTrades();
+      renderDashboard(); renderJournal();
+    } else {
+      currentUser=null;
+      $("auth-screen").style.display="flex";
+      $("app").style.display="none";
+    }
+  });
+
+  // ── Firestore ──
+  async function loadTrades(){
+    const q = query(collection(db,"trades"),where("uid","==",currentUser.uid));
+    const snap = await getDocs(q);
+    trades = snap.docs.map(d=>({id:d.id,...d.data()}));
+  }
+
+  async function saveTrade(data){
+    if(editId){ await updateDoc(doc(db,"trades",editId),data); toast("TRADE UPDATED"); }
+    else { await addDoc(collection(db,"trades"),{...data,uid:currentUser.uid}); toast("TRADE SAVED"); }
+    await loadTrades(); renderDashboard(); renderJournal(); closeForm();
+  }
+
+  async function deleteTrade(id){
+    if(!confirm("Delete this trade?"))return;
+    await deleteDoc(doc(db,"trades",id));
+    trades=trades.filter(t=>t.id!==id); toast("DELETED");
+    renderDashboard(); renderJournal();
+  }
+
+  function calcPnL(entry,exit,qty,dir){
+    entry=+entry; exit=+exit; qty=+qty;
+    if(!entry||!exit||!qty)return 0;
+    const d=dir==="Long"?exit-entry:entry-exit;
+    return parseFloat((d*qty).toFixed(2));
+  }
+
+  // ── Tabs ──
+  document.querySelectorAll(".ntab").forEach(b=>{
+    b.addEventListener("click",()=>{
+      document.querySelectorAll(".ntab").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active");
+      $("tab-dashboard").style.display=b.dataset.tab==="dashboard"?"block":"none";
+      $("tab-journal").style.display=b.dataset.tab==="journal"?"block":"none";
+    });
+  });
+
+  // ── Form ──
+  function openForm(trade=null){
+    editId=trade?trade.id:null;
+    $("form-title").textContent=trade?"Edit Trade":"Log New Trade";
+    $("form-sub").textContent=trade?"UPDATE TRADE DETAILS":"FILL IN TRADE DETAILS";
+    $("f-date").value=trade?trade.date:today();
+    $("f-symbol").value=trade?(trade.symbol):"";
+    $("f-market").value=trade?trade.market:"Stocks";
+    $("f-entry").value=trade?trade.entry:"";
+    $("f-exit").value=trade?trade.exit:"";
+    $("f-qty").value=trade?trade.qty:"";
+    $("f-setup").value=trade?trade.setup:"Breakout";
+    $("f-notes").value=trade?(trade.notes||""):"";
+    setDir(trade?trade.direction:"Long");
+    $("form-overlay").classList.add("open");
+    updatePreview();
+  }
+  function closeForm(){ $("form-overlay").classList.remove("open"); editId=null; }
+  function setDir(d){
+    direction=d;
+    $("dir-long").className="dir-opt"+(d==="Long"?" sel-long":"");
+    $("dir-short").className="dir-opt"+(d==="Short"?" sel-short":"");
+  }
+  $("show-form-btn").addEventListener("click",()=>openForm());
+  $("close-form").addEventListener("click",closeForm);
+  $("cancel-btn").addEventListener("click",closeForm);
+  $("form-overlay").addEventListener("click",e=>{ if(e.target===$("form-overlay"))closeForm(); });
+  $("dir-long").addEventListener("click",()=>{setDir("Long");updatePreview();});
+  $("dir-short").addEventListener("click",()=>{setDir("Short");updatePreview();});
+  ["f-entry","f-exit","f-qty"].forEach(id=>$(""+id).addEventListener("input",updatePreview));
+
+  function updatePreview(){
+    const e=parseFloat($("f-entry").value), x=parseFloat($("f-exit").value), q=parseFloat($("f-qty").value);
+    const prev=$("pnl-preview");
+    if(e&&x&&q){
+      const pnl=calcPnL(e,x,q,direction);
+      const mv=direction==="Long"?((x-e)/e*100):((e-x)/e*100);
+      prev.style.display="flex";
+      prev.innerHTML=`
+        <span>ESTIMATED P&L <strong style="color:${pnl>=0?'var(--green)':'var(--red)'};margin-left:6px">${fmtPnL(pnl)}</strong></span>
+        <span>PRICE MOVE <strong style="color:var(--text);margin-left:6px">${mv.toFixed(2)}%</strong></span>
+        <span>SIDE <strong style="color:${direction==='Long'?'var(--green)':'var(--red)'};margin-left:6px">${direction.toUpperCase()}</strong></span>`;
+    } else { prev.style.display="none"; }
+  }
+
+  $("save-btn").addEventListener("click",async()=>{
+    const sym=$("f-symbol").value.trim().toUpperCase();
+    const entry=parseFloat($("f-entry").value), exit=parseFloat($("f-exit").value), qty=parseFloat($("f-qty").value);
+    if(!sym||!entry||!exit||!qty){toast("FILL IN ALL FIELDS");return;}
+    const pnl=calcPnL(entry,exit,qty,direction);
+    await saveTrade({
+      date:$("f-date").value, symbol:sym, market:$("f-market").value,
+      direction, entry, exit, qty, pnl,
+      setup:$("f-setup").value, notes:$("f-notes").value.trim()
+    });
+  });
+
+  // ── Filters ──
+  document.querySelectorAll("[data-market]").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll("[data-market]").forEach(x=>x.classList.remove("act"));
+    b.classList.add("act"); filterMarket=b.dataset.market; renderJournal();
+  }));
+  document.querySelectorAll("[data-dir]").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll("[data-dir]").forEach(x=>x.classList.remove("act"));
+    b.classList.add("act"); filterDir=b.dataset.dir; renderJournal();
+  }));
+
+  // ── Dashboard ──
+  function renderDashboard(){
+    const wins=trades.filter(t=>t.pnl>0), losses=trades.filter(t=>t.pnl<=0);
+    const total=trades.reduce((s,t)=>s+(t.pnl||0),0);
+    const wr=trades.length?(wins.length/trades.length*100):0;
+    const aw=wins.length?wins.reduce((s,t)=>s+t.pnl,0)/wins.length:0;
+    const al=losses.length?losses.reduce((s,t)=>s+t.pnl,0)/losses.length:0;
+    const rr=al!==0?Math.abs(aw/al):0;
+    const pf=Math.abs(al)>0?Math.abs(aw)/Math.abs(al):0;
+
+    $("kpi-grid").innerHTML = [
+      {n:"01",label:"TOTAL P&L",val:(total>=0?"+":"-")+"$"+fmt(Math.abs(total)),sub:trades.length+" trades logged",col:total>=0?"var(--green)":"var(--red)",pct:Math.min(Math.abs(total)/500,100),pcol:total>=0?"var(--green)":"var(--red)"},
+      {n:"02",label:"WIN RATE",val:wr.toFixed(1)+"%",sub:wins.length+"W / "+losses.length+"L",col:wr>=50?"var(--green)":"var(--red)",pct:wr,pcol:wr>=50?"var(--green)":"var(--red)"},
+      {n:"03",label:"AVG WIN",val:"+$"+fmt(aw),sub:"per winning trade",col:"var(--green)",pct:Math.min(aw/100,100),pcol:"var(--green)"},
+      {n:"04",label:"AVG LOSS",val:"-$"+fmt(Math.abs(al)),sub:"per losing trade",col:"var(--red)",pct:Math.min(Math.abs(al)/100,100),pcol:"var(--red)"},
+      {n:"05",label:"RISK / REWARD",val:rr.toFixed(2)+"R",sub:"profit factor "+pf.toFixed(2),col:"var(--purple)",pct:Math.min(rr/5*100,100),pcol:"var(--purple)"},
+    ].map(k=>`
+      <div class="kpi-card" data-n="${k.n}">
+        <div class="kpi-label">${k.label}</div>
+        <div class="kpi-val" style="color:${k.col}">${k.val}</div>
+        <div class="kpi-sub">${k.sub}</div>
+        <div class="kpi-bar"><div class="kpi-bar-fill" style="width:${k.pct}%;background:${k.pcol}"></div></div>
+      </div>`).join("");
+
+    // Equity curve
+    const sorted=[...trades].sort((a,b)=>a.date.localeCompare(b.date));
+    let cum=0; const curve=sorted.map(t=>{cum+=(t.pnl||0);return cum;});
+    if(curve.length>1){
+      const mn=Math.min(...curve),mx=Math.max(...curve),rng=mx-mn||1;
+      const W=600,H=100;
+      const pts=curve.map((v,i)=>`${(i/(curve.length-1))*W},${H-((v-mn)/rng)*(H-8)+4}`).join(" ");
+      const lc=curve[curve.length-1]>=0?"var(--green)":"var(--red)";
+      const last=curve[curve.length-1];
+      $("eq-badge").innerHTML=`<span style="color:${lc};font-family:var(--mono);font-size:12px;font-weight:700">${fmtPnL(last)}</span>`;
+      $("eq-svg").innerHTML=`
+        <defs>
+          <linearGradient id="eg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${lc}" stop-opacity="0.2"/>
+            <stop offset="100%" stop-color="${lc}" stop-opacity="0"/>
+          </linearGradient>
+          <filter id="glow"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <polygon points="0,${H} ${pts} ${W},${H}" fill="url(#eg)"/>
+        <polyline points="${pts}" fill="none" stroke="${lc}" stroke-width="2" stroke-linejoin="round" filter="url(#glow)"/>
+        <circle cx="${(curve.length-1)/(curve.length-1)*W}" cy="${H-((curve[curve.length-1]-mn)/rng)*(H-8)+4}" r="3" fill="${lc}"/>
+      `;
+      $("eq-s").textContent=sorted[0]?.date||"";
+      $("eq-e").textContent=sorted[sorted.length-1]?.date||"";
+    }
+
+    // Markets
+    const mkts=["Stocks","Forex","Options","Futures"];
+    const mcols={Stocks:"var(--purple)",Forex:"var(--gold)",Options:"#ff8fab",Futures:"var(--accent)"};
+    const mdata=mkts.map(m=>({m,pnl:trades.filter(t=>t.market===m).reduce((s,t)=>s+(t.pnl||0),0),n:trades.filter(t=>t.market===m).length})).filter(m=>m.n>0);
+    const maxA=Math.max(...mdata.map(m=>Math.abs(m.pnl)),1);
+    $("mkt-breakdown").innerHTML=mdata.length?mdata.map(m=>`
+      <div class="mkt-item">
+        <div class="mkt-row">
+          <span class="mkt-name" style="color:${mcols[m.m]}">${m.m}</span>
+          <div class="mkt-info">
+            <div class="mkt-pnl" style="color:${m.pnl>=0?'var(--green)':'var(--red)'}">${fmtPnL(m.pnl)}</div>
+            <div class="mkt-cnt">${m.n} trade${m.n!==1?'s':''}</div>
+          </div>
+        </div>
+        <div class="track"><div class="fill" style="width:${(Math.abs(m.pnl)/maxA*100).toFixed(1)}%;background:${m.pnl>=0?'var(--green)':'var(--red)'}"></div></div>
+      </div>`).join(""):
+      `<p style="color:var(--text3);font-size:11px;font-family:var(--mono)">NO DATA YET</p>`;
+
+    // Recent
+    const recent=[...trades].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
+    $("recent-list").innerHTML=recent.length?recent.map(t=>`
+      <div class="recent-item">
+        <div class="ri-icon" style="background:${t.pnl>=0?'rgba(0,212,164,0.1)':'rgba(255,61,107,0.1)'}">
+          ${t.pnl>=0?`<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 10L6 5l3 3 4-6" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`:`<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4L6 9l3-3 4 6" stroke="var(--red)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`}
+        </div>
+        <div class="ri-body">
+          <div class="ri-sym">${t.symbol}</div>
+          <div class="ri-meta">${t.setup} · ${t.market}</div>
+        </div>
+        <div class="ri-right">
+          <div class="ri-pnl ${t.pnl>=0?'pos':'neg'}">${fmtPnL(t.pnl)}</div>
+          <div class="ri-date">${t.date}</div>
+        </div>
+      </div>`).join(""):
+      `<p style="color:var(--text3);font-size:11px;font-family:var(--mono);padding:16px 0">NO TRADES YET — HIT LOG TRADE TO START</p>`;
+  }
+
+  // ── Journal ──
+  function renderJournal(){
+    let rows=[...trades];
+    if(filterMarket!=="All") rows=rows.filter(t=>t.market===filterMarket);
+    if(filterDir!=="All") rows=rows.filter(t=>t.direction===filterDir);
+    rows.sort((a,b)=>{
+      let va=a[sortCol],vb=b[sortCol];
+      if(typeof va==="string"){va=va.toLowerCase();vb=vb.toLowerCase();}
+      return sortAsc?(va>vb?1:-1):(va<vb?1:-1);
+    });
+    const filtPnL=rows.reduce((s,t)=>s+(t.pnl||0),0);
+    $("j-count").textContent=`${rows.length} TRADE${rows.length!==1?"S":""} · FILTERED P&L: ${fmtPnL(filtPnL)}`;
+
+    const container=$("trades-container");
+    if(!rows.length){
+      container.innerHTML=`
+        <div class="empty">
+          <div class="empty-grid">${Array(16).fill(0).map((_,i)=>`<div class="eg-cell" style="opacity:${Math.random().toFixed(2)};height:${6+Math.random()*10}px;align-self:flex-end"></div>`).join("")}</div>
+          <div class="empty-title">NO TRADES FOUND</div>
+        </div>`;
+      return;
+    }
+
+    const arw=col=>sortCol===col?(sortAsc?"↑":"↓"):"";
+    container.innerHTML=`
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th data-s="date" ${sortCol==="date"?'class="sorted"':""}>DATE ${arw("date")}</th>
+              <th data-s="symbol" ${sortCol==="symbol"?'class="sorted"':""}>SYMBOL ${arw("symbol")}</th>
+              <th>MARKET</th><th>DIR</th>
+              <th data-s="entry" ${sortCol==="entry"?'class="sorted"':""}>ENTRY ${arw("entry")}</th>
+              <th data-s="exit" ${sortCol==="exit"?'class="sorted"':""}>EXIT ${arw("exit")}</th>
+              <th>QTY</th>
+              <th data-s="setup" ${sortCol==="setup"?'class="sorted"':""}>SETUP ${arw("setup")}</th>
+              <th data-s="pnl" ${sortCol==="pnl"?'class="sorted"':""}>P&L ${arw("pnl")}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(t=>`
+              <tr>
+                <td class="td-muted">${t.date}</td>
+                <td class="td-sym">${t.symbol}</td>
+                <td>${pill(t.market)}</td>
+                <td>${pill(t.direction)}</td>
+                <td class="td-mono">${fmt(t.entry)}</td>
+                <td class="td-mono">${fmt(t.exit)}</td>
+                <td class="td-mono" style="color:var(--text3)">${t.qty}</td>
+                <td style="font-size:11px;color:var(--text3);font-family:var(--mono)">${t.setup||"—"}</td>
+                <td class="${t.pnl>=0?'pos':'neg'}">${fmtPnL(t.pnl)}</td>
+                <td>
+                  <div class="ra">
+                    <div class="ra-btn" data-edit="${t.id}" title="Edit">
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5a1.5 1.5 0 012.12 2.12L4 10.25l-2.5.5.5-2.5L8.5 1.5z" stroke="#6b7fa3" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <div class="ra-btn" data-del="${t.id}" title="Delete">
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 3h9M4.5 3V2a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M5 5.5v3M7 5.5v3M2 3l.75 6.5a.5.5 0 00.5.5h5.5a.5.5 0 00.5-.5L10 3" stroke="#ff3d6b" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                  </div>
+                </td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+        <div class="tbl-foot">
+          <span class="tbl-foot-left">${rows.length} TRADE${rows.length!==1?"S":""}</span>
+          <div class="tbl-foot-right">
+            <span style="color:var(--text3)">FILTERED P&L</span>
+            <span style="color:${filtPnL>=0?'var(--green)':'var(--red)'};font-weight:700">${fmtPnL(filtPnL)}</span>
+          </div>
+        </div>
+      </div>`;
+
+    container.querySelectorAll("[data-s]").forEach(th=>th.addEventListener("click",()=>{
+      if(sortCol===th.dataset.s) sortAsc=!sortAsc; else{sortCol=th.dataset.s;sortAsc=false;}
+      renderJournal();
+    }));
+    container.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>{
+      const t=trades.find(x=>x.id===b.dataset.edit); if(t)openForm(t);
+    }));
+    container.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>deleteTrade(b.dataset.del)));
+  }
+</script>
 </body>
 </html>
